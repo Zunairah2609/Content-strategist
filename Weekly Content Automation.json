@@ -1,0 +1,516 @@
+{
+  "name": "Weekly Content Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 1,
+              "triggerAtMinute": 30
+            }
+          ]
+        }
+      },
+      "id": "ccd6f7f0-60cb-43be-993b-171d6986cb53",
+      "name": "Weekly Monday Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        240,
+        472
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://yourstory.com/feed",
+        "options": {
+          "customFields": ""
+        }
+      },
+      "id": "13f6e84b-9c4a-4465-bcb5-d9d51972e4e1",
+      "name": "YourStory RSS",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        464,
+        208
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "id": "91b30ec9-3a3a-41a6-8300-5b1b5291b9ea",
+      "name": "Merge RSS Feeds",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        688,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://inc42.com/feed",
+        "options": {}
+      },
+      "id": "bf0b03b8-641b-4118-8a84-195935402902",
+      "name": "Inc42 RSS",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        464,
+        400
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "url": "https://www.producthunt.com/feed",
+        "options": {}
+      },
+      "id": "aebed5d6-ac73-4fe4-887c-25e24624c9ff",
+      "name": "Product Hunt RSS",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1.2,
+      "position": [
+        464,
+        592
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "filter1",
+              "leftValue": "={{ $json.pubDate }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "afterOrEquals"
+              },
+              "rightValue": "={{ DateTime.now().minus({hours:72}).toISO() }}"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "da401e4b-62de-42b1-897b-c60d4972d4d8",
+      "name": "Filter Last 72 Hours",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        912,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "user_message_field",
+              "name": "user_message",
+              "type": "string",
+              "value": "=TREND CONTEXT:\n{{ $('Filter Last 72 Hours').all().slice(0,5).map(i => '- ' + i.json.title + ' | ' + i.json.pubDate).join('\\n') }}\n\nPAST PERFORMANCE:\n{{ $('Get Past Posts').all().slice(0,4).map(i => '- ' + (i.json.properties?.Name?.title?.[0]?.plain_text ?? '') + ' | Saves: ' + (i.json.properties?.Saves?.number ?? 0) + ' | Reposts: ' + (i.json.properties?.Reposts?.number ?? 0)).join('\\n') }}\n\nGenerate exactly 3 content briefs using the output format in your instructions."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7894df65-734e-43a7-a075-1b7eac9b78d8",
+      "name": "Build User Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1136,
+        568
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "a0d421296c5e43d7b7fbcc24968a77b7"
+        },
+        "limit": 12,
+        "filterType": "manual",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "key": "Posted|checkbox",
+              "type": "checkbox",
+              "condition": "equals",
+              "checkboxValue": true
+            }
+          ]
+        },
+        "options": {
+          "sort": {
+            "sortValue": [
+              {
+                "key": "=Date|date",
+                "direction": "descending"
+              }
+            ]
+          }
+        }
+      },
+      "id": "19a41255-ad63-478f-add1-ce6bfce46d1f",
+      "name": "Get Past Posts",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        912,
+        736
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "notionOAuth2Api": {
+          "id": "PkJcY5VXiEVSspuY",
+          "name": "Notion OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_message }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are the content strategist for Upfront, a B2B \nno-code automation agency in India.\n\nABOUT UPFRONT:\nUpfront builds automation systems, no-code workflows,\nWhatsApp business flows, landing pages, and local\ngrowth funnels for two specific customer types.\n\nICP A — Indian software developers. Build great \nproducts. Get zero users. Pain: distribution, \nsales, legal, capital. Vocabulary: production-grade, \ndeployment, architecture, rate limits.\nGoal: Upfront handles business so they stay in code.\n\nICP B — Indian SME owners. Cafes, restaurants, \ncloud kitchens, retail. Bleeding margins to Zomato, \nSwiggy, middlemen. Cannot afford IT agencies.\nGoal: Upfront is their zero-risk tech department.\n\nVOICE:\nPunchy short sentences. No fluff. No emojis.\nBanned: revolutionary, synergy, game-changer,\ntransformative, hustle, unlock, maximize.\nEvery claim needs a real how-to step.\nAdmit what is hard. Use real numbers always.\nSpeak as an equal. Not a mentor. Not a seller.\n\nWHAT COMPETITORS POST:\nGeneric automation agencies post about —\n- 10 tools to automate your business\n- Why automation saves time\n- The future of no-code\n\nUpfront never posts like this.\nUpfront posts about —\n- Specific rupee amounts lost or saved\n- Real build times with real tool stacks\n- Exact pain points of ICP A and ICP B\n- Uncomfortable truths the niche avoids\n- Behind the scenes of actual client builds\n\nIf a brief sounds like something any automation\nagency could post — reject it and go sharper.\n\nEXAMPLES OF GOOD CONTENT:\n\nGood LinkedIn hook —\n\"Your n8n workflow runs perfectly.\nZero users found it. Here is why.\"\n\nBad LinkedIn hook —\n\"Automation can help your business grow faster.\"\n\nGood Instagram S1 —\n\"Zomato just took 30% of that order\"\n\nBad Instagram S1 —\n\"No-code automation for restaurants\"\n\nGood angle —\n\"Most Indian developers optimize architecture\nbefore solving distribution. The pipeline is\nclean. Nobody is using the product.\"\n\nBad angle —\n\"How automation helps Indian developers\nbuild better products\"\n\nThe difference is specificity.\nSpecific = stops the scroll.\nGeneric = gets ignored.\n\nTASK:\nGenerate exactly 3 content briefs per week.\nFollow this mandatory mix — no exceptions:\n\nBRIEF 1 — REACH POST\nTopic must appeal to a broad audience beyond\njust Upfront's niche. Think Indian startup\necosystem, developer culture, SME survival,\nbusiness lessons, money, failure, growth.\nNo Upfront mention in the post itself.\nGoal: shares, saves, new followers.\nAngle: Unpopular opinion or Uncomfortable Truth.\n\nBRIEF 2 — NICHE POST\nDirectly relevant to ICP A or ICP B pain.\nLight reference to automation as the solution.\nNo hard sell. No Upfront name in hook.\nGoal: deep resonance with target audience.\nAngle: Contrarian or How-To or Myth Busting.\n\nBRIEF 3 — UPFRONT POST\nDirect content about Upfront — what we build,\nhow we work, client results, behind the scenes.\nThis is the conversion post.\nGoal: warm audience takes action.\nAngle: BTS or Founder Story or Social Proof.\n\nMix ICP A and ICP B across the 3 briefs.\nUse the angle type with highest saves and\nreposts from past performance data.\nEach brief under 2500 characters.\nNo preamble. No sign-off.\nPut ===BRIEF_START=== before every brief.\nYou must generate all 3 briefs in one response.\nAll 3 briefs are mandatory. No exceptions.\n\nOUTPUT FORMAT — use exactly 3 times:\n\n===BRIEF_START===\n\n[ UPFRONT // WEEK [number] // STORY [1/2/3] OF 3 ]\n====================================\n\nWHAT & WHY\n------------------------------------\nslug        [topic in 4 words — filing name]\nicp         [A = developer / B = SME owner /\n             BOTH = broad reach post]\nangle       [Uncomfortable Truth / Contrarian /\n             How-To / Myth Busting / BTS /\n             Founder Story]\npriority    [URGENT = post today /\n             HIGH = post this week /\n             MEDIUM = flexible]\npost by     [day date time IST]\n\nWHO SEES THIS\n[One line. Exact person. Exact pain. Right now.]\n\n====================================\nPRODUCTION DESK\n====================================\n\nwho         [Role 1] + [Role 2]\ntools       [Canva / Figma / CapCut]\ntime        [how long to produce this]\n\nVISUAL DIRECTION\n------------------------------------\npalette     [#hex] / [#hex] / [#hex]\nmood        [3 words — tone for the designer]\nlayout      [how the graphic is structured]\ngenerate    \"[Exact prompt for Midjourney or\n             Ideogram — style, mood, colors,\n             what shows left, what shows right]\"\n\n====================================\nLINKEDIN — [Day Date Time IST]\n====================================\n\"[Hook. Max 12 words. Hard number if possible.\n  No Upfront mention for Brief 1.]\"\n\n01. [problem — specific, real number]\n02. [insight — how the fix works]\n03. [implementation — time, cost, result]\n\n#NocodeOps #EnterpriseAutomation #n8n [2 more]\n\n====================================\nINSTAGRAM — [Day Date Time IST]\n[Carousel / Reel / Static]\n====================================\nS1  [stop scroll — max 8 words, no emoji]\nS2  [pain — one line, simply stated]\nS3  [proof — real number or before vs after]\nS4  [fix — one clean line]\nS5  comment [WORD] — we send you [deliverable]\n\n[One punchy sentence caption. 3 hashtags.]\n\n====================================\nDESK NOTES\n====================================\nseed        \"[exact first comment — post within\n             30 min of publishing, ask a question\n             that triggers your target audience]\"\n\nrepurpose   [format → format]\n\nhard rule   [the one thing that kills this post\n             if ignored — non-negotiable]\n\n===================================="
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "id": "02bf3848-cc7e-4757-83fa-07dfe218cf2c",
+      "name": "Generate Content Briefs",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1360,
+        568
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $input.first().json.text || \n               $input.first().json.output || \n               $input.first().json.content || '';\n\nlet briefs = output\n  .split('===BRIEF_START===')\n  .map(p => p.trim())\n  .filter(p => p.length > 100);\n\nif (briefs.length === 0) {\n  briefs = output\n    .split(/(?=\\[\\s*UPFRONT)/)\n    .map(p => p.trim())\n    .filter(p => p.length > 100);\n}\n\nif (briefs.length === 0) {\n  briefs = [output.trim()];\n}\n\nconst messages = briefs.map((brief) => ({\n  json: { brief: brief.trim().substring(0, 4000) }\n}));\n\nmessages.push({\n  json: {\n    brief: `====================================\n[ UPFRONT // TEAM NOTE ]\n====================================\n\n3 briefs above. Use them as direction.\nNot final copy. You bring the execution.\n\nHOW TO USE\nlead line     — starting point not final\nvisual prompt — refine before generating\npost times    — adjust based on your read\nseed comment  — 30 min after posting. always.\n\nAFTER POSTING\ntick Posted in Notion\nadd Saves and Reposts after 48 hours\nthis feeds next week\n\ndeadline — all 3 live before Sunday midnight\n====================================`\n  }\n});\n\nreturn messages;"
+      },
+      "id": "c225e28a-8788-45d3-a25f-e36c4f13c337",
+      "name": "Split 3 Briefs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1712,
+        568
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "-1003818623664",
+        "text": "={{ $json.brief }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "f0420e7b-b0c4-468a-bcb1-73b5787942d6",
+      "name": "Send to Team",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1936,
+        568
+      ],
+      "webhookId": "7abd42c1-755b-47f3-9f87-22c32dac743a",
+      "credentials": {
+        "telegramApi": {
+          "id": "n1VwtVs0BW4wWBgn",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "id": "e6a4695d-f8fc-4abd-b29c-02db5b3d32e4",
+      "name": "Delay Between Messages",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2160,
+        568
+      ],
+      "webhookId": "46761893-4bbb-4e0a-af8d-6c070e97e5f1"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "a0d421296c5e43d7b7fbcc24968a77b7"
+        },
+        "title": "=Name:     {{ 'W' + $now.toFormat('WW') + ' · Story ' + ($runIndex + 1) + ' · ' + $json.brief.substring(20, 60) }}\nDate:     {{ $now.toISO() }}\nWeek:     {{ $now.toFormat('WW-yyyy') }}\nCaption:  {{ $json.brief }}\nPriority: High\nPosted:   false",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Name|title",
+              "type": "title",
+              "title": "=Content Brief {{ $runIndex + 1 }} Week {{ $now.toFormat(\"WW-yyyy\") }}"
+            },
+            {
+              "key": "Date|date",
+              "type": "date",
+              "date": "={{ $now.toISO() }}"
+            },
+            {
+              "key": "Week|rich_text",
+              "type": "rich_text",
+              "textContent": "={{ $now.toFormat(\"WW-yyyy\") }}"
+            },
+            {
+              "key": "Priority|select",
+              "type": "select",
+              "selectValue": "High"
+            },
+            {
+              "key": "Posted|checkbox",
+              "type": "checkbox"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ab1e7f5b-c96c-472a-962f-402c9722789e",
+      "name": "Store Brief",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        2384,
+        568
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "sfCX7L33tTfycJjD",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "llama-3.1-8b-instant",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1376,
+        736
+      ],
+      "id": "84188adf-24c5-4b5e-8875-e01f514517c0",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "JKPyQB5SAysJTqbf",
+          "name": "Groq account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Weekly Monday Trigger": {
+      "main": [
+        [
+          {
+            "node": "YourStory RSS",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Inc42 RSS",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Product Hunt RSS",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Past Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YourStory RSS": {
+      "main": [
+        [
+          {
+            "node": "Merge RSS Feeds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge RSS Feeds": {
+      "main": [
+        [
+          {
+            "node": "Filter Last 72 Hours",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inc42 RSS": {
+      "main": [
+        [
+          {
+            "node": "Merge RSS Feeds",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Product Hunt RSS": {
+      "main": [
+        [
+          {
+            "node": "Merge RSS Feeds",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Filter Last 72 Hours": {
+      "main": [
+        [
+          {
+            "node": "Build User Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build User Message": {
+      "main": [
+        [
+          {
+            "node": "Generate Content Briefs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Past Posts": {
+      "main": [
+        [
+          {
+            "node": "Build User Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Content Briefs": {
+      "main": [
+        [
+          {
+            "node": "Split 3 Briefs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split 3 Briefs": {
+      "main": [
+        [
+          {
+            "node": "Send to Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send to Team": {
+      "main": [
+        [
+          {
+            "node": "Delay Between Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delay Between Messages": {
+      "main": [
+        [
+          {
+            "node": "Store Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Content Briefs",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "f02f8ba5-72e9-4f6f-87e3-37a95244214a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7df6512a24437f212bb551c81eac6f7a96d1375e006a73fd6cc38c4db5875a8e"
+  },
+  "id": "zdJv1i46xnxLIkCr",
+  "tags": []
+}
